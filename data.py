@@ -36,3 +36,9 @@ def load_recipes() -> list:
         return []
     with open(RECIPES_JSON, encoding="utf-8") as f:
         return json.load(f)
+
+
+def delete_recipe(recipe_id: int) -> None:
+    recipes = [r for r in load_recipes() if r["id"] != recipe_id]
+    with open(RECIPES_JSON, "w", encoding="utf-8") as f:
+        json.dump(recipes, f, indent=2, ensure_ascii=False)

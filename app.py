@@ -19,7 +19,7 @@ from solver import solve, solve_flexible, diagnose, KPI_DEFAULTS, KPI_LABELS
 # #F2CD24 vibrant yellow  |  #E3C988 light golden  |  #FFFFFF white
 STYLE = """
 QMainWindow, QDialog {
-    background-color: #FFFFFF;
+    background-color: #EDE8D8;
 }
 
 /* ── Dialogs ── */
@@ -85,21 +85,22 @@ QWidget {
 /* ── GroupBox cards ── */
 QGroupBox {
     background-color: #FAFAF7;
-    border: 1px solid #DDD0A0;
+    border: 1.5px solid #C8B870;
     border-top: 3px solid #236C45;
     border-radius: 6px;
     margin-top: 20px;
-    padding: 14px 12px 12px 12px;
+    margin-bottom: 8px;
+    padding: 16px 16px 16px 16px;
     font-weight: bold;
     color: #236C45;
-    font-size: 11px;
+    font-size: 12px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
     left: 14px;
     top: -1px;
     padding: 0 8px;
-    background-color: #FAFAF7;
+    background-color: transparent;
 }
 
 /* ── Buttons ── */
@@ -141,9 +142,18 @@ QPushButton#btn_save {
 }
 QPushButton#btn_save:hover  { background-color: #B08A3A; }
 QPushButton#btn_save:pressed { background-color: #9A7530; }
-QPushButton#btn_deselect_all {
+/* Secondary actions — less visual weight */
+QPushButton#btn_load, QPushButton#btn_deselect_all {
+    background-color: #FAFAF7;
+    color: #6B8575;
+    border: 1px solid #DDD0A0;
     font-size: 11px;
     padding: 5px 12px;
+}
+QPushButton#btn_load:hover, QPushButton#btn_deselect_all:hover {
+    background-color: #E8F4EE;
+    border-color: #236C45;
+    color: #236C45;
 }
 
 /* ── Tables ── */
@@ -152,13 +162,13 @@ QTableWidget {
     alternate-background-color: #F7F5EE;
     border: 1px solid #DDD0A0;
     border-radius: 5px;
-    gridline-color: #EDE8D0;
+    gridline-color: #F2EDD8;
     selection-background-color: #CEEADB;
     selection-color: #113516;
     color: #1C2E20;
     outline: none;
 }
-QTableWidget::item { padding: 5px 10px; }
+QTableWidget::item { padding: 7px 12px; }
 QHeaderView { border: none; }
 QHeaderView::section {
     background-color: #EDE8D8;
@@ -179,7 +189,7 @@ QListWidget {
     color: #1C2E20;
     outline: none;
 }
-QListWidget::item { padding: 4px 8px; }
+QListWidget::item { padding: 6px 8px; }
 QListWidget::item:hover { background-color: #E8F4EE; color: #236C45; }
 QListWidget::item:selected { background-color: #CEEADB; color: #113516; }
 
@@ -302,15 +312,19 @@ ANVISA_NUTRIENTS = [
 
 
 class _RecipePickerDialog(QDialog):
-    def __init__(self, names: list[str], parent=None):
+    def __init__(self, recipes: list[dict], parent=None):
         super().__init__(parent)
         self.setWindowTitle("Carregar Receita")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setFixedSize(520, 420)
+        self.setStyleSheet("QDialog { border: 2px solid #E3C988; border-radius: 6px; }")
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(14)
+        self._recipes = list(recipes)
+        self._drag_pos = None
+
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(24, 20, 24, 20)
+        self._layout.setSpacing(14)
 
         # Title bar
         title_bar = QHBoxLayout()
@@ -327,21 +341,19 @@ class _RecipePickerDialog(QDialog):
         title_bar.addWidget(lbl_title)
         title_bar.addStretch()
         title_bar.addWidget(btn_close)
-        layout.addLayout(title_bar)
+        self._layout.addLayout(title_bar)
 
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
         divider.setFixedHeight(1)
         divider.setStyleSheet("background-color: #E3C988; border: none;")
-        layout.addWidget(divider)
+        self._layout.addWidget(divider)
 
-        layout.addWidget(QLabel("Selecione uma receita:"))
+        self._layout.addWidget(QLabel("Selecione uma receita:"))
 
         self.list_widget = QListWidget()
-        self.list_widget.addItems(names)
-        self.list_widget.setCurrentRow(0)
         self.list_widget.doubleClicked.connect(self.accept)
-        layout.addWidget(self.list_widget, stretch=1)
+        self._layout.addWidget(self.list_widget, stretch=1)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -350,9 +362,59 @@ class _RecipePickerDialog(QDialog):
         buttons.rejected.connect(self.reject)
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Carregar")
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
-        layout.addWidget(buttons)
+        self._layout.addWidget(buttons)
 
-        self._drag_pos = None
+        self._populate()
+
+    def _populate(self):
+        self.list_widget.clear()
+        for recipe in self._recipes:
+            label = f"#{recipe['id']} — {recipe['name']}  ({recipe['date']})"
+            item = QListWidgetItem()
+            item.setSizeHint(QSize(0, 40))
+            item.setData(Qt.ItemDataRole.UserRole, recipe["id"])
+            self.list_widget.addItem(item)
+
+            row = QWidget()
+            row.setStyleSheet("background: transparent;")
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(8, 4, 8, 4)
+            row_layout.setSpacing(8)
+
+            lbl = QLabel(label)
+            lbl.setStyleSheet("background: transparent; color: #1C2E20;")
+
+            btn_del = QPushButton("X")
+            btn_del.setFixedSize(24, 24)
+            btn_del.setToolTip("Excluir receita")
+            btn_del.setStyleSheet(
+                "QPushButton { background-color: #EDE8D8; border: 1px solid #C8B870;"
+                " border-radius: 3px; color: #1C2E20; font-size: 11px; font-weight: bold; padding: 0; }"
+                "QPushButton:hover { background-color: #FDECEA; border-color: #C0392B; color: #C0392B; }"
+            )
+            btn_del.clicked.connect(lambda _, r=recipe: self._confirm_delete(r))
+
+            row_layout.addWidget(lbl, stretch=1)
+            row_layout.addWidget(btn_del)
+            self.list_widget.setItemWidget(item, row)
+
+        if self._recipes:
+            self.list_widget.setCurrentRow(0)
+
+    def _confirm_delete(self, recipe: dict):
+        reply = QMessageBox.question(
+            self,
+            "Confirmar exclusão",
+            f"Deseja excluir a receita \"{recipe['name']}\"?\nEsta ação não pode ser desfeita.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            data.delete_recipe(recipe["id"])
+            self._recipes = [r for r in self._recipes if r["id"] != recipe["id"]]
+            self._populate()
+            if not self._recipes:
+                self.reject()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -365,9 +427,9 @@ class _RecipePickerDialog(QDialog):
     def mouseReleaseEvent(self, event):
         self._drag_pos = None
 
-    def selected(self) -> str:
+    def selected_id(self) -> int | None:
         item = self.list_widget.currentItem()
-        return item.text() if item else ""
+        return item.data(Qt.ItemDataRole.UserRole) if item else None
 
 
 class _Throbber(QWidget):
@@ -507,13 +569,13 @@ class MainWindow(QMainWindow):
         # Content area with padding
         content = QWidget()
         main_layout = QVBoxLayout(content)
-        main_layout.setContentsMargins(20, 8, 20, 12)
+        main_layout.setContentsMargins(14, 8, 14, 14)
         main_layout.setSpacing(0)
 
         # Header — logo
         logo_label = QLabel()
         logo_path = str(Path(__file__).parent / "resources" / "Logo.png")
-        pixmap = QPixmap(logo_path).scaledToHeight(150, Qt.TransformationMode.SmoothTransformation)
+        pixmap = QPixmap(logo_path).scaledToHeight(115, Qt.TransformationMode.SmoothTransformation)
         logo_label.setPixmap(pixmap)
         logo_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         logo_label.setStyleSheet("padding: 4px 0 10px 0; background: transparent;")
@@ -540,6 +602,8 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(8)
+        splitter.setStyleSheet("QSplitter::handle { background-color: transparent; }")
         splitter.addWidget(self._build_ingredients_panel())
         splitter.addWidget(self._build_settings_panel())
         splitter.setSizes([450, 550])
@@ -592,6 +656,7 @@ class MainWindow(QMainWindow):
     def _build_ingredients_panel(self) -> QWidget:
         box = QGroupBox("Ingredientes Disponíveis")
         layout = QVBoxLayout(box)
+        layout.setSpacing(8)
 
         # Search
         self.search_bar = QLineEdit()
@@ -602,6 +667,7 @@ class MainWindow(QMainWindow):
         # Buttons row
         btn_row = QHBoxLayout()
         btn_load = QPushButton("Carregar Receita")
+        btn_load.setObjectName("btn_load")
         btn_load.clicked.connect(self._on_load_recipe)
         btn_none = QPushButton("Desmarcar Todos")
         btn_none.setObjectName("btn_deselect_all")
@@ -612,7 +678,7 @@ class MainWindow(QMainWindow):
 
         # Selection counter
         self.lbl_selected_count = QLabel("0 selecionados")
-        self.lbl_selected_count.setStyleSheet("color: #6B8575; font-size: 11px;")
+        self.lbl_selected_count.setStyleSheet("color: #6B8575; font-size: 11px; background: transparent;")
         self.lbl_selected_count.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.lbl_selected_count)
 
@@ -644,7 +710,7 @@ class MainWindow(QMainWindow):
 
             # Ingredient row with checkbox + min spinbox
             item = QListWidgetItem()
-            item.setSizeHint(QSize(0, 30))
+            item.setSizeHint(QSize(0, 36))
             item.setData(Qt.ItemDataRole.UserRole, name)
             self.ingredient_list.addItem(item)
 
@@ -686,7 +752,7 @@ class MainWindow(QMainWindow):
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(16)
 
         # Base size
         size_box = QGroupBox("Tamanho da Base")
@@ -704,9 +770,12 @@ class MainWindow(QMainWindow):
         # KPI ranges
         kpi_box = QGroupBox("Metas de KPI  (editáveis)")
         kpi_layout = QVBoxLayout(kpi_box)
+        kpi_layout.setContentsMargins(8, 8, 8, 8)
         self.kpi_table = self._build_kpi_table()
         kpi_layout.addWidget(self.kpi_table)
         layout.addWidget(kpi_box, stretch=1)
+
+        layout.addSpacing(8)
 
         # Solve button
         self.btn_solve = QPushButton("Calcular Receita")
@@ -752,8 +821,8 @@ class MainWindow(QMainWindow):
             table.setCellWidget(row_idx, 2, spin_hi)
             self._kpi_spins[kpi] = (spin_lo, spin_hi)
 
-        table.verticalHeader().setDefaultSectionSize(36)
-        table.setMaximumHeight(36 * len(kpis) + 34)
+        table.verticalHeader().setDefaultSectionSize(44)
+        table.setMaximumHeight(44 * len(kpis) + 44)
         return table
 
     def _build_results_panel(self) -> QWidget:
@@ -832,7 +901,7 @@ class MainWindow(QMainWindow):
         self.nutrition_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         self.nutrition_table.setColumnWidth(1, 110)
         self.nutrition_table.setColumnWidth(2, 110)
-        self.nutrition_table.setColumnWidth(3, 55)
+        self.nutrition_table.setColumnWidth(3, 80)
         self.nutrition_table.verticalHeader().setVisible(False)
         self.nutrition_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.nutrition_table.setAlternatingRowColors(True)
@@ -844,7 +913,7 @@ class MainWindow(QMainWindow):
             "* % Valores Diários com base em uma dieta de 2.000 kcal ou 8.400 kJ. "
             "Seus valores diários podem ser maiores ou menores dependendo de suas necessidades energéticas."
         )
-        footnote.setStyleSheet("color: #8AA094; font-size: 10px;")
+        footnote.setStyleSheet("color: #8AA094; font-size: 10px; background: transparent;")
         footnote.setWordWrap(True)
         layout.addWidget(footnote)
 
@@ -970,12 +1039,15 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Receitas", "Nenhuma receita salva ainda.")
             return
 
-        names = [f"#{r['id']} — {r['name']}  ({r['date']})" for r in recipes]
-        dlg = _RecipePickerDialog(names, self)
+        dlg = _RecipePickerDialog(recipes, self)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
 
-        recipe = recipes[names.index(dlg.selected())]
+        recipe_id = dlg.selected_id()
+        recipes = data.load_recipes()  # reload — user may have deleted some
+        recipe = next((r for r in recipes if r["id"] == recipe_id), None)
+        if recipe is None:
+            return
 
         self._checked_names.clear()
         self._min_quantities.clear()
