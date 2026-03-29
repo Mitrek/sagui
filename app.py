@@ -1,13 +1,15 @@
 import sys
+import math
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QListWidget, QListWidgetItem, QPushButton, QTableWidget,
     QTableWidgetItem, QLineEdit, QGroupBox, QDoubleSpinBox, QMessageBox,
     QHeaderView, QSplitter, QInputDialog, QAbstractItemView, QCheckBox,
-    QStackedWidget,
+    QStackedWidget, QFrame,
 )
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, QSize, QTimer, QPointF
+from PyQt6.QtGui import QFont, QColor, QPixmap, QPainter
 
 import data
 from solver import solve, solve_flexible, diagnose, KPI_DEFAULTS, KPI_LABELS
@@ -16,141 +18,218 @@ from solver import solve, solve_flexible, diagnose, KPI_DEFAULTS, KPI_LABELS
 # #C5A04D brass-gold  |  #236C45 deep green  |  #113516 dark forest green
 # #F2CD24 vibrant yellow  |  #E3C988 light golden  |  #FFFFFF white
 STYLE = """
-QMainWindow, QWidget {
+QMainWindow, QDialog {
     background-color: #FFFFFF;
-    color: #113516;
+}
+QWidget {
+    background-color: #FFFFFF;
+    color: #1C2E20;
     font-family: 'Segoe UI';
     font-size: 13px;
 }
+
+/* ── GroupBox cards ── */
 QGroupBox {
-    background-color: #FFFFFF;
-    border: 1px solid #E3C988;
-    border-radius: 8px;
-    margin-top: 14px;
-    padding: 10px 8px 8px 8px;
+    background-color: #FAFAF7;
+    border: 1px solid #DDD0A0;
+    border-top: 3px solid #236C45;
+    border-radius: 6px;
+    margin-top: 20px;
+    padding: 14px 12px 12px 12px;
     font-weight: bold;
     color: #236C45;
-    font-size: 13px;
+    font-size: 11px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
-    left: 12px;
-    padding: 0 6px;
-    background-color: #FFFFFF;
+    left: 14px;
+    top: -1px;
+    padding: 0 8px;
+    background-color: #FAFAF7;
 }
+
+/* ── Buttons ── */
 QPushButton {
-    background-color: #F5EDD4;
-    color: #113516;
-    border: 1px solid #E3C988;
-    border-radius: 6px;
-    padding: 6px 14px;
+    background-color: #F2EDD8;
+    color: #1C2E20;
+    border: 1px solid #D4C07A;
+    border-radius: 5px;
+    padding: 6px 16px;
 }
 QPushButton:hover {
-    background-color: #EAF4EE;
+    background-color: #E8F4EE;
     border-color: #236C45;
     color: #236C45;
+}
+QPushButton:pressed {
+    background-color: #CEEADB;
+    border-color: #113516;
+    color: #113516;
 }
 QPushButton#btn_solve {
     background-color: #236C45;
     color: #FFFFFF;
     font-weight: bold;
     font-size: 15px;
-    padding: 10px;
+    padding: 12px;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
 }
-QPushButton#btn_solve:hover  { background-color: #1a5234; }
+QPushButton#btn_solve:hover  { background-color: #1E5C3C; }
 QPushButton#btn_solve:pressed { background-color: #113516; }
 QPushButton#btn_save {
     background-color: #C5A04D;
     color: #FFFFFF;
     font-weight: bold;
     border: none;
-    border-radius: 6px;
-    padding: 8px 16px;
+    border-radius: 5px;
+    padding: 8px 18px;
 }
 QPushButton#btn_save:hover  { background-color: #B08A3A; }
-QPushButton#btn_select_all, QPushButton#btn_deselect_all {
+QPushButton#btn_save:pressed { background-color: #9A7530; }
+QPushButton#btn_deselect_all {
     font-size: 11px;
-    padding: 4px 10px;
+    padding: 5px 12px;
 }
+
+/* ── Tables ── */
 QTableWidget {
     background-color: #FFFFFF;
-    border: 1px solid #E3C988;
-    border-radius: 6px;
-    gridline-color: #F5EDD4;
-    selection-background-color: #EAF4EE;
-    color: #113516;
+    alternate-background-color: #F7F5EE;
+    border: 1px solid #DDD0A0;
+    border-radius: 5px;
+    gridline-color: #EDE8D0;
+    selection-background-color: #CEEADB;
+    selection-color: #113516;
+    color: #1C2E20;
+    outline: none;
 }
-QTableWidget::item { padding: 4px 8px; }
+QTableWidget::item { padding: 5px 10px; }
+QHeaderView { border: none; }
 QHeaderView::section {
-    background-color: #FAFAF7;
-    color: #236C45;
+    background-color: #EDE8D8;
+    color: #4A6B52;
     border: none;
-    border-right: 1px solid #E3C988;
-    border-bottom: 1px solid #E3C988;
-    padding: 6px 8px;
+    border-right: 1px solid #DDD0A0;
+    border-bottom: 2px solid #C8B870;
+    padding: 7px 10px;
     font-weight: bold;
+    font-size: 12px;
 }
+
+/* ── List widget ── */
 QListWidget {
     background-color: #FFFFFF;
-    border: 1px solid #E3C988;
-    border-radius: 6px;
-    color: #113516;
+    border: 1px solid #DDD0A0;
+    border-radius: 5px;
+    color: #1C2E20;
+    outline: none;
 }
-QListWidget::item { padding: 3px 6px; }
-QListWidget::item:hover { background-color: #EAF4EE; }
+QListWidget::item { padding: 4px 8px; }
+QListWidget::item:hover { background-color: #E8F4EE; color: #236C45; }
+QListWidget::item:selected { background-color: #CEEADB; color: #113516; }
+
+/* ── Inputs ── */
 QDoubleSpinBox, QLineEdit {
     background-color: #FFFFFF;
-    border: 1px solid #E3C988;
-    border-radius: 4px;
-    padding: 4px 8px;
-    color: #113516;
+    border: 1px solid #DDD0A0;
+    border-radius: 5px;
+    padding: 5px 10px;
+    color: #1C2E20;
 }
-QDoubleSpinBox:focus, QLineEdit:focus { border-color: #236C45; }
-QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 0px; height: 0px; }
+QDoubleSpinBox:hover, QLineEdit:hover { border-color: #B8A860; }
+QDoubleSpinBox:focus, QLineEdit:focus {
+    border-color: #236C45;
+    background-color: #FBFFF9;
+}
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 0; height: 0; }
+
+/* ── Scrollbars ── */
 QScrollBar:vertical {
-    background: #F5EDD4;
-    width: 6px;
-    border-radius: 3px;
+    background: #F2EDD8;
+    width: 7px;
+    border-radius: 4px;
+    margin: 2px;
 }
 QScrollBar::handle:vertical {
-    background: #E3C988;
-    border-radius: 3px;
-    min-height: 20px;
+    background: #C5B070;
+    border-radius: 4px;
+    min-height: 24px;
 }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
-QSplitter::handle { background-color: #E3C988; width: 2px; }
-QCheckBox { spacing: 6px; background: transparent; }
+QScrollBar::handle:vertical:hover { background: #A89050; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar:horizontal { height: 0; }
+
+/* ── Splitter ── */
+QSplitter::handle { background-color: #DDD0A0; width: 1px; }
+
+/* ── Checkbox ── */
+QCheckBox { spacing: 8px; background: transparent; }
 QCheckBox::indicator {
-    width: 14px; height: 14px;
-    border: 1px solid #E3C988;
+    width: 15px; height: 15px;
+    border: 1.5px solid #C5B070;
     border-radius: 3px;
     background-color: #FFFFFF;
+}
+QCheckBox::indicator:hover {
+    border-color: #236C45;
+    background-color: #F0FFF4;
 }
 QCheckBox::indicator:checked {
     background-color: #236C45;
     border-color: #236C45;
 }
+
+/* ── Min spinbox (small, inline) ── */
 QDoubleSpinBox#spin_min {
-    background-color: #FAFAF7;
+    background-color: #F2EDD8;
     border: 1px solid #E3C988;
     border-radius: 3px;
-    color: #64748b;
+    color: #6B8575;
     font-size: 11px;
-    padding: 1px 4px;
+    padding: 2px 6px;
 }
 QDoubleSpinBox#spin_min:disabled {
-    color: #E3C988;
-    background-color: #FAFAF7;
-    border-color: #F5EDD4;
+    color: #C5B8A0;
+    background-color: #F5F0E8;
+    border-color: #EDE8D8;
 }
+QDoubleSpinBox#spin_min:enabled:focus { border-color: #236C45; }
+
+/* ── Tooltip ── */
+QToolTip {
+    background-color: #1C2E20;
+    color: #FFFFFF;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+/* ── Custom title bar controls ── */
+QPushButton#btn_min, QPushButton#btn_max {
+    background: transparent;
+    border: none;
+    color: #8AA094;
+    font-size: 15px;
+    border-radius: 4px;
+}
+QPushButton#btn_min:hover { background-color: #E8F4EE; color: #236C45; }
+QPushButton#btn_max:hover { background-color: #E8F4EE; color: #236C45; }
+QPushButton#btn_close {
+    background: transparent;
+    border: none;
+    color: #8AA094;
+    font-size: 15px;
+    border-radius: 4px;
+}
+QPushButton#btn_close:hover { background-color: #FDECEA; color: #C0392B; }
 """
 
 GREEN  = "#236C45"
-RED    = "#dc2626"
+RED    = "#C0392B"
 YELLOW = "#C5A04D"
-MUTED  = "#94a3b8"
+MUTED  = "#8AA094"
 
 # (col, label, unit, vd_ref, indent, no_vd)
 # vd_ref = None → no %VD column | no_vd = True → "Não há VD"
@@ -168,10 +247,117 @@ ANVISA_NUTRIENTS = [
 ]
 
 
+class _Throbber(QWidget):
+    """Windows-style spinning dot ring."""
+    NUM  = 12
+    SIZE = 80
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(self.SIZE, self.SIZE)
+        self._step = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+
+    def start(self):
+        self._step = 0
+        self._timer.start(83)   # ~12 fps → one full rotation per second
+        self.show()
+
+    def stop(self):
+        self._timer.stop()
+        self.hide()
+
+    def _tick(self):
+        self._step = (self._step + 1) % self.NUM
+        self.update()
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        cx = cy = self.SIZE / 2
+        orbit  = self.SIZE * 0.32
+        dot_r  = self.SIZE * 0.09
+
+        for i in range(self.NUM):
+            angle = 2 * math.pi * i / self.NUM - math.pi / 2
+            x = cx + orbit * math.cos(angle)
+            y = cy + orbit * math.sin(angle)
+
+            # age 0 = current (brightest), trails off clockwise
+            age = (i - self._step) % self.NUM
+            opacity = max(0.07, 1.0 - age / self.NUM)
+
+            color = QColor(35, 108, 69)   # #236C45
+            color.setAlphaF(opacity)
+            painter.setBrush(color)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QPointF(x, y), dot_r, dot_r)
+
+        painter.end()
+
+
+class _TitleBar(QWidget):
+    def __init__(self, parent: QMainWindow):
+        super().__init__(parent)
+        self.setFixedHeight(40)
+        self.setStyleSheet("background-color: #FFFFFF; border-bottom: 1px solid #E3C988;")
+        self._drag_pos = None
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 0, 8, 0)
+        layout.setSpacing(4)
+        layout.addStretch()
+
+        BASE = ("font-size: 14px; font-weight: bold; border-radius: 4px; border: none;"
+                " background-color: #EDE8D8; color: #113516; padding: 0;")
+        for obj_name, symbol, hover_css in [
+            ("btn_min",   "_",  "background-color:#E8F4EE; color:#236C45;"),
+            ("btn_max",   "⤢",  "background-color:#E8F4EE; color:#236C45;"),
+            ("btn_close", "×",  "background-color:#FDECEA; color:#C0392B;"),
+        ]:
+            btn = QPushButton(symbol)
+            btn.setObjectName(obj_name)
+            btn.setFixedSize(32, 28)
+            btn.setCursor(Qt.CursorShape.ArrowCursor)
+            btn.setStyleSheet(
+                f"QPushButton {{ {BASE} }}"
+                f"QPushButton:hover {{ {hover_css} }}"
+            )
+            layout.addWidget(btn)
+
+        self.findChild(QPushButton, "btn_min").clicked.connect(parent.showMinimized)
+        self.findChild(QPushButton, "btn_max").clicked.connect(self._toggle_max)
+        self.findChild(QPushButton, "btn_close").clicked.connect(parent.close)
+
+    def _toggle_max(self):
+        win = self.window()
+        if win.isMaximized():
+            win.showNormal()
+        else:
+            win.showMaximized()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint() - self.window().frameGeometry().topLeft()
+
+    def mouseMoveEvent(self, event):
+        if self._drag_pos is not None and event.buttons() == Qt.MouseButton.LeftButton:
+            self.window().move(event.globalPosition().toPoint() - self._drag_pos)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+
+    def mouseDoubleClickEvent(self, event):
+        self._toggle_max()
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sagui Gelatos — Balanceador de Receitas")
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setMinimumSize(1000, 800)
         self._last_nutrition_quantities: dict | None = None
         self._last_nutrition_base_size: float = 1000.0
@@ -187,22 +373,42 @@ class MainWindow(QMainWindow):
     def _setup_ui(self):
         root = QWidget()
         self.setCentralWidget(root)
-        main_layout = QVBoxLayout(root)
-        main_layout.setContentsMargins(16, 12, 16, 12)
-        main_layout.setSpacing(10)
+        outer_layout = QVBoxLayout(root)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
 
-        # Header
-        header = QLabel("Sagui Gelatos")
-        header.setStyleSheet("font-size: 26px; font-weight: bold; color: #C5A04D;")
-        sub = QLabel("Balanceador de Base — powered by Linear Programming")
-        sub.setStyleSheet("color: #94a3b8; font-size: 12px;")
-        main_layout.addWidget(header)
-        main_layout.addWidget(sub)
+        # Custom title bar (edge-to-edge)
+        outer_layout.addWidget(_TitleBar(self))
+
+        # Content area with padding
+        content = QWidget()
+        main_layout = QVBoxLayout(content)
+        main_layout.setContentsMargins(20, 12, 20, 16)
+        main_layout.setSpacing(0)
+
+        # Header — logo
+        logo_label = QLabel()
+        logo_path = str(Path(__file__).parent / "resources" / "Logo.png")
+        pixmap = QPixmap(logo_path).scaledToHeight(80, Qt.TransformationMode.SmoothTransformation)
+        logo_label.setPixmap(pixmap)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        logo_label.setStyleSheet("padding: 6px 0 8px 0; background: transparent;")
+        main_layout.addWidget(logo_label)
+
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFixedHeight(1)
+        divider.setStyleSheet("background-color: #E3C988; border: none;")
+        main_layout.addWidget(divider)
+        main_layout.addSpacing(10)
 
         self.stacked = QStackedWidget()
         main_layout.addWidget(self.stacked, stretch=1)
-        self.stacked.addWidget(self._build_main_page())
-        self.stacked.addWidget(self._build_results_page())
+        self.stacked.addWidget(self._build_main_page())      # index 0
+        self.stacked.addWidget(self._build_loading_page())    # index 1
+        self.stacked.addWidget(self._build_results_page())    # index 2
+
+        outer_layout.addWidget(content, stretch=1)
 
     def _build_main_page(self) -> QWidget:
         page = QWidget()
@@ -214,6 +420,14 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self._build_settings_panel())
         splitter.setSizes([450, 550])
         layout.addWidget(splitter)
+        return page
+
+    def _build_loading_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._throbber = _Throbber()
+        layout.addWidget(self._throbber, alignment=Qt.AlignmentFlag.AlignCenter)
         return page
 
     def _build_results_page(self) -> QWidget:
@@ -274,7 +488,7 @@ class MainWindow(QMainWindow):
 
         # Selection counter
         self.lbl_selected_count = QLabel("0 selecionados")
-        self.lbl_selected_count.setStyleSheet("color: #64748b; font-size: 11px;")
+        self.lbl_selected_count.setStyleSheet("color: #6B8575; font-size: 11px;")
         self.lbl_selected_count.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.lbl_selected_count)
 
@@ -323,7 +537,7 @@ class MainWindow(QMainWindow):
             chk.toggled.connect(lambda c, n=name: self._on_checkbox_toggled(n, c))
 
             lbl_min = QLabel("mín:")
-            lbl_min.setStyleSheet("color: #94a3b8; font-size: 11px;")
+            lbl_min.setStyleSheet("color: #8AA094; font-size: 11px;")
             lbl_min.setFixedWidth(28)
 
             spin = QDoubleSpinBox()
@@ -347,6 +561,7 @@ class MainWindow(QMainWindow):
     def _build_settings_panel(self) -> QWidget:
         container = QWidget()
         layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
         # Base size
@@ -435,6 +650,7 @@ class MainWindow(QMainWindow):
         self.qty_table.setColumnWidth(2, 60)
         self.qty_table.verticalHeader().setVisible(False)
         self.qty_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.qty_table.setAlternatingRowColors(True)
         layout.addWidget(self.qty_table, stretch=1)
 
         # KPI actuals
@@ -453,6 +669,7 @@ class MainWindow(QMainWindow):
         self.kpi_result_table.setColumnWidth(3, 80)
         self.kpi_result_table.verticalHeader().setVisible(False)
         self.kpi_result_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.kpi_result_table.setAlternatingRowColors(True)
         self.kpi_result_table.setMaximumHeight(220)
         layout.addWidget(self.kpi_result_table)
 
@@ -494,6 +711,7 @@ class MainWindow(QMainWindow):
         self.nutrition_table.setColumnWidth(3, 55)
         self.nutrition_table.verticalHeader().setVisible(False)
         self.nutrition_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.nutrition_table.setAlternatingRowColors(True)
         self.nutrition_table.setVisible(False)
         layout.addWidget(self.nutrition_table, stretch=1)
 
@@ -502,7 +720,7 @@ class MainWindow(QMainWindow):
             "* % Valores Diários com base em uma dieta de 2.000 kcal ou 8.400 kJ. "
             "Seus valores diários podem ser maiores ou menores dependendo de suas necessidades energéticas."
         )
-        footnote.setStyleSheet("color: #94a3b8; font-size: 10px;")
+        footnote.setStyleSheet("color: #8AA094; font-size: 10px;")
         footnote.setWordWrap(True)
         layout.addWidget(footnote)
 
@@ -611,6 +829,17 @@ class MainWindow(QMainWindow):
         self._populate_ingredient_list(self.search_bar.text())
         self._update_selected_count()
 
+    def _throb_then(self, callback):
+        """Show the Windows-style spinner page for 2 s, then call callback."""
+        self.stacked.setCurrentIndex(1)
+        self._throbber.start()
+
+        def _done():
+            self._throbber.stop()
+            callback()
+
+        QTimer.singleShot(1000, _done)
+
     def _on_load_recipe(self):
         recipes = data.load_recipes()
         if not recipes:
@@ -635,6 +864,23 @@ class MainWindow(QMainWindow):
         self.spin_base.setValue(recipe["base_size"])
         self._populate_ingredient_list(self.search_bar.text())
         self._update_selected_count()
+
+        # Build result and go straight to the results tab
+        kpi_ranges = {
+            kpi: (sp_lo.value(), sp_hi.value())
+            for kpi, (sp_lo, sp_hi) in self._kpi_spins.items()
+        }
+        result = {"quantities": recipe["ingredients"], "kpis": recipe["kpis"], "violations": {}}
+        self._last_result = result
+        self._last_base_size = recipe["base_size"]
+        self._last_kpi_ranges = kpi_ranges
+        self._display_results(result, recipe["base_size"], kpi_ranges)
+
+        # Override status with the recipe name
+        self.lbl_status.setText(f"#{recipe['id']} — {recipe['name']}")
+        self.lbl_status.setStyleSheet(f"color: {GREEN}; font-weight: bold;")
+
+        self._throb_then(lambda: self.stacked.setCurrentIndex(2))
 
     def _on_solve(self):
         selected_names = self._get_selected_names()
@@ -685,14 +931,14 @@ class MainWindow(QMainWindow):
                     lines.append(f"    Considere adicionar: {suggestions}")
                 self.lbl_status.setText(self.lbl_status.text() + "\n".join(lines))
 
-            self.stacked.setCurrentIndex(1)
+            self._throb_then(lambda: self.stacked.setCurrentIndex(2))
             return
 
         self._last_result = result
         self._last_base_size = base_size
         self._last_kpi_ranges = kpi_ranges
         self._display_results(result, base_size, kpi_ranges)
-        self.stacked.setCurrentIndex(1)
+        self._throb_then(lambda: self.stacked.setCurrentIndex(2))
 
     def _display_diagnosis(self, issues: list):
         self.qty_table.setRowCount(0)

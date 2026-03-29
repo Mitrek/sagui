@@ -1,4 +1,5 @@
 import sys
+import time
 import logging
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QSplashScreen, QLabel
@@ -60,9 +61,12 @@ def main():
         splash.show()
         app.processEvents()
 
+        t_start = time.monotonic()
         window = MainWindow()
+        elapsed_ms = int((time.monotonic() - t_start) * 1000)
+        remaining_ms = max(0, 3000 - elapsed_ms)
 
-        QTimer.singleShot(3000, lambda: (splash.finish(window), window.show()))
+        QTimer.singleShot(remaining_ms, lambda: (splash.finish(window), window.show()))
 
         sys.exit(app.exec())
     except Exception:
