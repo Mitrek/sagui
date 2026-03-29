@@ -3,7 +3,7 @@ import time
 import logging
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QSplashScreen, QLabel
-from PyQt6.QtGui import QPixmap, QColor
+from PyQt6.QtGui import QPixmap, QColor, QIcon
 from PyQt6.QtCore import Qt, QTimer
 from app import MainWindow, STYLE
 
@@ -35,6 +35,7 @@ def main():
     try:
         app = QApplication(sys.argv)
         app.setStyleSheet(STYLE)
+        app.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "logo.ico")))
 
         # Splash screen
         logo_path = Path(__file__).parent / "resources" / "Logo.png"
