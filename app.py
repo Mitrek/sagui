@@ -369,7 +369,7 @@ class _RecipePickerDialog(QDialog):
     def _populate(self):
         self.list_widget.clear()
         for recipe in self._recipes:
-            label = f"#{recipe['id']} — {recipe['name']}  ({recipe['date']})"
+            label = f"{recipe['name']}  ({recipe['date']})"
             item = QListWidgetItem()
             item.setSizeHint(QSize(0, 40))
             item.setData(Qt.ItemDataRole.UserRole, recipe["id"])
@@ -384,13 +384,15 @@ class _RecipePickerDialog(QDialog):
             lbl = QLabel(label)
             lbl.setStyleSheet("background: transparent; color: #1C2E20;")
 
-            btn_del = QPushButton("X")
+            btn_del = QPushButton()
+            bin_icon_path = str(Path(__file__).parent / "resources" / "bin_icon.png")
+            btn_del.setIcon(QIcon(bin_icon_path))
+            btn_del.setIconSize(QSize(16, 16))
             btn_del.setFixedSize(24, 24)
             btn_del.setToolTip("Excluir receita")
             btn_del.setStyleSheet(
-                "QPushButton { background-color: #EDE8D8; border: 1px solid #C8B870;"
-                " border-radius: 3px; color: #1C2E20; font-size: 11px; font-weight: bold; padding: 0; }"
-                "QPushButton:hover { background-color: #FDECEA; border-color: #C0392B; color: #C0392B; }"
+                "QPushButton { background-color: transparent; border: none; padding: 0; }"
+                "QPushButton:hover { background-color: #FDECEA; border-radius: 3px; }"
             )
             btn_del.clicked.connect(lambda _, r=recipe: self._confirm_delete(r))
 
@@ -621,7 +623,7 @@ class MainWindow(QMainWindow):
     def _build_results_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 4, 0, 0)
+        layout.setContentsMargins(14, 8, 14, 14)
         layout.setSpacing(8)
 
         # Navigation bar
@@ -646,6 +648,8 @@ class MainWindow(QMainWindow):
         # Results + nutrition side by side
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(8)
+        splitter.setStyleSheet("QSplitter::handle { background-color: transparent; }")
         splitter.addWidget(self._build_results_panel())
         splitter.addWidget(self._build_nutrition_panel())
         splitter.setSizes([500, 500])
@@ -1073,7 +1077,7 @@ class MainWindow(QMainWindow):
         self._display_results(result, recipe["base_size"], kpi_ranges)
 
         # Override status with the recipe name
-        self.lbl_status.setText(f"#{recipe['id']} — {recipe['name']}")
+        self.lbl_status.setText(recipe['name'])
         self.lbl_status.setStyleSheet(f"color: {GREEN}; font-weight: bold;")
 
         self._throb_then(lambda: self.stacked.setCurrentIndex(2))
