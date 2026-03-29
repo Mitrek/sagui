@@ -383,16 +383,16 @@ class MainWindow(QMainWindow):
         # Content area with padding
         content = QWidget()
         main_layout = QVBoxLayout(content)
-        main_layout.setContentsMargins(20, 12, 20, 16)
+        main_layout.setContentsMargins(20, 4, 20, 12)
         main_layout.setSpacing(0)
 
         # Header — logo
         logo_label = QLabel()
         logo_path = str(Path(__file__).parent / "resources" / "Logo.png")
-        pixmap = QPixmap(logo_path).scaledToHeight(80, Qt.TransformationMode.SmoothTransformation)
+        pixmap = QPixmap(logo_path).scaledToHeight(52, Qt.TransformationMode.SmoothTransformation)
         logo_label.setPixmap(pixmap)
         logo_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        logo_label.setStyleSheet("padding: 6px 0 8px 0; background: transparent;")
+        logo_label.setStyleSheet("padding: 2px 0 4px 0; background: transparent;")
         main_layout.addWidget(logo_label)
 
         divider = QFrame()
@@ -400,7 +400,7 @@ class MainWindow(QMainWindow):
         divider.setFixedHeight(1)
         divider.setStyleSheet("background-color: #E3C988; border: none;")
         main_layout.addWidget(divider)
-        main_layout.addSpacing(10)
+        main_layout.addSpacing(6)
 
         self.stacked = QStackedWidget()
         main_layout.addWidget(self.stacked, stretch=1)
@@ -838,7 +838,7 @@ class MainWindow(QMainWindow):
             self._throbber.stop()
             callback()
 
-        QTimer.singleShot(1000, _done)
+        QTimer.singleShot(500, _done)
 
     def _on_load_recipe(self):
         recipes = data.load_recipes()
