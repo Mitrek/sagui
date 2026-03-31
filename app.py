@@ -13,6 +13,8 @@ from PyQt6.QtGui import QFont, QColor, QPixmap, QPainter, QIcon
 
 import data
 from solver import solve, solve_flexible, diagnose, KPI_DEFAULTS, KPI_LABELS
+from research_view import ResearchView
+from research_run_view import ResearchRunView
 
 # ── Sagui brand palette ───────────────────────────────────────────────────────
 # #C5A04D brass-gold  |  #236C45 deep green  |  #113516 dark forest green
@@ -29,7 +31,7 @@ QDialog QLabel {
 }
 
 /* ── ComboBox (used in recipe picker dialog) ── */
-QComboBox {
+QDialog QComboBox {
     background-color: #FFFFFF;
     border: 1px solid #DDD0A0;
     border-radius: 5px;
@@ -38,9 +40,9 @@ QComboBox {
     font-size: 13px;
     min-width: 200px;
 }
-QComboBox:hover { border-color: #B8A860; }
-QComboBox:focus { border-color: #236C45; background-color: #FBFFF9; }
-QComboBox::drop-down {
+QDialog QComboBox:hover { border-color: #B8A860; }
+QDialog QComboBox:focus { border: 1px solid #236C45; outline: none; background-color: #FBFFF9; }
+QDialog QComboBox::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: top right;
     width: 28px;
@@ -49,7 +51,7 @@ QComboBox::drop-down {
     border-bottom-right-radius: 5px;
     background-color: #F2EDD8;
 }
-QComboBox::down-arrow {
+QDialog QComboBox::down-arrow {
     width: 8px;
     height: 8px;
     border: 2px solid #236C45;
@@ -57,7 +59,7 @@ QComboBox::down-arrow {
     border-right: none;
     margin-top: -3px;
 }
-QComboBox QAbstractItemView {
+QDialog QComboBox QAbstractItemView {
     background-color: #FFFFFF;
     border: 1px solid #DDD0A0;
     border-radius: 5px;
@@ -67,11 +69,11 @@ QComboBox QAbstractItemView {
     padding: 4px;
     outline: none;
 }
-QComboBox QAbstractItemView::item {
+QDialog QComboBox QAbstractItemView::item {
     padding: 6px 10px;
     border-radius: 3px;
 }
-QComboBox QAbstractItemView::item:hover {
+QDialog QComboBox QAbstractItemView::item:hover {
     background-color: #E8F4EE;
     color: #236C45;
 }
@@ -260,6 +262,53 @@ QDoubleSpinBox#spin_min:disabled {
 }
 QDoubleSpinBox#spin_min:enabled:focus { border-color: #236C45; }
 
+/* ── ComboBox ── */
+QComboBox {
+    background-color: #FAFAF7;
+    border: 1px solid #E3C988;
+    border-radius: 4px;
+    padding: 4px 28px 4px 8px;
+    color: #1C2E20;
+    font-size: 12px;
+    outline: none;
+    selection-background-color: #EDE8D8;
+    selection-color: #1C2E20;
+}
+QComboBox:hover {
+    border: 1px solid #E3C988;
+}
+QComboBox:focus {
+    border: 1px solid #E3C988;
+    outline: none;
+    background-color: #FAFAF7;
+}
+QComboBox:hover:focus {
+    border: 1px solid #E3C988;
+    outline: none;
+}
+QComboBox:disabled { color: #A0A0A0; background-color: #F5F0E8; border-color: #EDE8D8; }
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 24px;
+    border: none;
+    background: #FAFAF7;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+QComboBox::down-arrow {
+    image: url(resources/dropdown_arrow.png);
+    width: 10px;
+    height: 6px;
+}
+QComboBox QAbstractItemView {
+    background-color: #FAFAF7;
+    border: 1px solid #E3C988;
+    selection-background-color: #EDE8D8;
+    selection-color: #1C2E20;
+    outline: none;
+}
+
 /* ── Tooltip ── */
 QToolTip {
     background-color: #1C2E20;
@@ -268,6 +317,64 @@ QToolTip {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;
+}
+
+/* ── Research runner controls ── */
+QPushButton#btn_start {
+    background-color: #236C45;
+    color: #FFFFFF;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+}
+QPushButton#btn_start:hover  { background-color: #1E5C3C; }
+QPushButton#btn_start:pressed { background-color: #113516; }
+QPushButton#btn_stop {
+    background-color: #C0392B;
+    color: #FFFFFF;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+}
+QPushButton#btn_stop:hover  { background-color: #A93226; }
+QPushButton#btn_stop:pressed { background-color: #922B21; }
+QPushButton#btn_stop:disabled { background-color: #E6B0AA; }
+
+/* ── Navigation tabs ── */
+QWidget#tab_bar {
+    background-color: transparent;
+    border-bottom: 1.5px solid #D4C07A;
+}
+QPushButton#tab_btn {
+    background-color: #EDE8D0;
+    color: #8A7A50;
+    border: 1px solid transparent;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 7px 20px;
+    min-width: 140px;
+    font-size: 13px;
+    margin-top: 4px;
+}
+QPushButton#tab_btn:checked {
+    background-color: #FFFFFF;
+    color: #236C45;
+    font-weight: bold;
+    border: 1.5px solid #236C45;
+    border-bottom: 1.5px solid #FFFFFF;
+    margin-top: 0;
+    padding-top: 9px;
+}
+QPushButton#tab_btn:hover:!checked {
+    background-color: #E8F4EE;
+    color: #236C45;
+    border-color: #C8D8C0;
 }
 
 /* ── Custom title bar controls ── */
@@ -501,7 +608,7 @@ class _TitleBar(QWidget):
                 " background-color: #EDE8D8; color: #113516; padding: 0;")
         for obj_name, symbol, hover_css in [
             ("btn_min",   "_",  "background-color:#E8F4EE; color:#236C45;"),
-            ("btn_max",   "⤢",  "background-color:#E8F4EE; color:#236C45;"),
+            ("btn_max",   "□",  "background-color:#E8F4EE; color:#236C45;"),
             ("btn_close", "×",  "background-color:#FDECEA; color:#C0392B;"),
         ]:
             btn = QPushButton(symbol)
@@ -583,20 +690,54 @@ class MainWindow(QMainWindow):
         logo_label.setStyleSheet("padding: 4px 0 10px 0; background: transparent;")
         main_layout.addWidget(logo_label)
 
-        divider = QFrame()
-        divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setFixedHeight(1)
-        divider.setStyleSheet("background-color: #E3C988; border: none;")
-        main_layout.addWidget(divider)
-        main_layout.addSpacing(10)
+        main_layout.addWidget(self._build_tab_bar())
 
         self.stacked = QStackedWidget()
         main_layout.addWidget(self.stacked, stretch=1)
         self.stacked.addWidget(self._build_main_page())      # index 0
         self.stacked.addWidget(self._build_loading_page())    # index 1
         self.stacked.addWidget(self._build_results_page())    # index 2
+        self.stacked.addWidget(self._build_research_page())    # index 3
+        self.stacked.addWidget(self._build_research_run_page()) # index 4
+        self.stacked.currentChanged.connect(self._on_tab_changed)
 
         outer_layout.addWidget(content, stretch=1)
+
+    def _build_tab_bar(self) -> QWidget:
+        bar = QWidget()
+        bar.setObjectName("tab_bar")
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        self._tab_criar = QPushButton("✏️  Criar Receitas")
+        self._tab_criar.setObjectName("tab_btn")
+        self._tab_criar.setCheckable(True)
+        self._tab_criar.setChecked(True)
+        self._tab_criar.clicked.connect(lambda _: self.stacked.setCurrentIndex(0))
+
+        self._tab_explorar = QPushButton("🔬  Explorar Receitas")
+        self._tab_explorar.setObjectName("tab_btn")
+        self._tab_explorar.setCheckable(True)
+        self._tab_explorar.setChecked(False)
+        self._tab_explorar.clicked.connect(lambda _: self.stacked.setCurrentIndex(3))
+
+        self._tab_pesquisar = QPushButton("🧪  Pesquisar Receitas")
+        self._tab_pesquisar.setObjectName("tab_btn")
+        self._tab_pesquisar.setCheckable(True)
+        self._tab_pesquisar.setChecked(False)
+        self._tab_pesquisar.clicked.connect(lambda _: self.stacked.setCurrentIndex(4))
+
+        layout.addWidget(self._tab_criar)
+        layout.addWidget(self._tab_explorar)
+        layout.addWidget(self._tab_pesquisar)
+        layout.addStretch()
+        return bar
+
+    def _on_tab_changed(self, index: int):
+        self._tab_criar.setChecked(index in (0, 1, 2))
+        self._tab_explorar.setChecked(index == 3)
+        self._tab_pesquisar.setChecked(index == 4)
 
     def _build_main_page(self) -> QWidget:
         page = QWidget()
@@ -656,6 +797,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(splitter, stretch=1)
 
         return page
+
+    def _build_research_page(self) -> QWidget:
+        self._research_view = ResearchView()
+        return self._research_view
+
+    def _build_research_run_page(self) -> QWidget:
+        self._research_run_view = ResearchRunView()
+        return self._research_run_view
 
     def _build_ingredients_panel(self) -> QWidget:
         box = QGroupBox("Ingredientes Disponíveis")
@@ -755,7 +904,7 @@ class MainWindow(QMainWindow):
     def _build_settings_panel(self) -> QWidget:
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, 0, 26)
         layout.setSpacing(16)
 
         # Base size
@@ -778,8 +927,6 @@ class MainWindow(QMainWindow):
         self.kpi_table = self._build_kpi_table()
         kpi_layout.addWidget(self.kpi_table)
         layout.addWidget(kpi_box, stretch=1)
-
-        layout.addSpacing(8)
 
         # Solve button
         self.btn_solve = QPushButton("Calcular Receita")

@@ -34,6 +34,7 @@ def main():
     setup_logging()
     try:
         app = QApplication(sys.argv)
+        app.setStyle("Fusion")
         app.setStyleSheet(STYLE)
         app.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "logo.ico")))
 
@@ -65,7 +66,7 @@ def main():
         t_start = time.monotonic()
         window = MainWindow()
         elapsed_ms = int((time.monotonic() - t_start) * 1000)
-        remaining_ms = max(0, 3000 - elapsed_ms)
+        remaining_ms = max(0, 2000 - elapsed_ms)
 
         QTimer.singleShot(remaining_ms, lambda: (splash.finish(window), window.show()))
 
